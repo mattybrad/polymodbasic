@@ -9,12 +9,13 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 AudioControlSGTL5000 sgtl;
 AudioOutputI2S mainOutput;
-AudioSynthWaveformModulated saw;
-AudioSynthWaveformModulated lfo;
 AudioAmplifier finalStage;
 AudioConnection con1(finalStage,0,mainOutput,0);
 AudioConnection con2(finalStage,0,mainOutput,1);
-AudioConnection con3(saw,0,finalStage,0);
+AudioConnection* dynamicConnections[16];
+
+AudioSynthWaveformModulated module_oscillatorSquare;
+AudioSynthWaveformModulated module_oscillatorSaw;
 
 const int MUX_SEND_PINS[] = {2,3,4};
 const int MUX_RECEIVE_PINS[] = {5,6,7};
@@ -30,7 +31,6 @@ void setup() {
   AudioMemory(20);
   sgtl.enable();
   sgtl.volume(0.2);
-  saw.begin(0.2,80,WAVEFORM_SAWTOOTH);
   
   for(int i=0;i<3;i++) {
     pinMode(MUX_SEND_PINS[i], OUTPUT);
@@ -44,7 +44,11 @@ void setup() {
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
   
-  Serial.println("MIDI Input Test");
+  Serial.println("initialising...");
+  module_oscillatorSaw.begin(0.3,220,WAVEFORM_SAWTOOTH);
+  delay(500);
+  dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, finalStage, 0);
+  Serial.println("audio connection!");
 }
 
 unsigned long t=0;
@@ -93,7 +97,10 @@ void loop() {
               }
             }
           }
-          if(j<4 && !digitalRead(KEYBOARD_PIN)) Serial.println(j);
+          if(!digitalRead(KEYBOARD_PIN)) {
+            float freq = pow(2.0, (j-0.0)/12.0) * 440.0;
+            module_oscillatorSaw.frequency(freq);
+          }
         }
       }
     }
@@ -110,7 +117,7 @@ void loop() {
         if (velocity > 0) {
           Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
           float freq = pow(2.0, (note-49.0)/12.0) * 440.0;
-          saw.frequency(freq);
+          //saw.frequency(freq);
         } else {
           Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
         }
@@ -133,3 +140,4 @@ void loop() {
     //Serial.println("(inactivity)");
   }
 }
+
