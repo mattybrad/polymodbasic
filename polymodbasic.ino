@@ -4,19 +4,44 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
+// GUItool: begin automatically generated code
+AudioMixer4              oscFrequency;         //xy=271,338
+AudioMixer4              filterFreq;         //xy=270,628
+AudioMixer4              filterInput;         //xy=272,534
+AudioSynthWaveform       lfo;      //xy=457,92
+AudioFilterStateVariable filter;        //xy=468,587
+AudioSynthWaveformModulated square;   //xy=472,262
+AudioSynthWaveformModulated sawtooth;   //xy=476,418
+AudioMixer4              finalStage;         //xy=970,349
+AudioOutputI2S           i2s1;           //xy=1136,351
+AudioConnection          patchCord1(oscFrequency, 0, square, 0);
+AudioConnection          patchCord2(oscFrequency, 0, sawtooth, 0);
+AudioConnection          patchCord3(filterFreq, 0, filter, 1);
+AudioConnection          patchCord4(filterInput, 0, filter, 0);
+AudioConnection          patchCord5(lfo, 0, finalStage, 0);
+AudioConnection          patchCord6(lfo, 0, oscFrequency, 0);
+AudioConnection          patchCord7(lfo, 0, filterInput, 0);
+AudioConnection          patchCord8(lfo, 0, filterFreq, 0);
+AudioConnection          patchCord9(filter, 0, finalStage, 3);
+AudioConnection          patchCord10(filter, 0, oscFrequency, 3);
+AudioConnection          patchCord11(filter, 0, filterInput, 3);
+AudioConnection          patchCord12(filter, 0, filterFreq, 3);
+AudioConnection          patchCord13(square, 0, finalStage, 1);
+AudioConnection          patchCord14(square, 0, oscFrequency, 1);
+AudioConnection          patchCord15(square, 0, filterInput, 1);
+AudioConnection          patchCord16(square, 0, filterFreq, 1);
+AudioConnection          patchCord17(sawtooth, 0, finalStage, 2);
+AudioConnection          patchCord18(sawtooth, 0, oscFrequency, 2);
+AudioConnection          patchCord19(sawtooth, 0, filterInput, 2);
+AudioConnection          patchCord20(sawtooth, 0, filterFreq, 2);
+AudioConnection          patchCord21(finalStage, 0, i2s1, 0);
+AudioConnection          patchCord22(finalStage, 0, i2s1, 1);
+AudioControlSGTL5000     sgtl5000_1;     //xy=1122,137
+// GUItool: end automatically generated code
+
+
 #include <MIDI.h>
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-
-AudioControlSGTL5000 sgtl;
-AudioOutputI2S mainOutput;
-
-AudioAmplifier module_finalStage;
-AudioSynthWaveformModulated module_oscillatorSquare;
-AudioSynthWaveformModulated module_oscillatorSaw;
-
-AudioConnection* dynamicConnections[16];
-AudioConnection staticConnection1(module_finalStage,0,mainOutput,0);
-AudioConnection staticConnection2(module_finalStage,0,mainOutput,1);
 
 const int MUX_SEND_PINS[] = {2,3,4};
 const int MUX_RECEIVE_PINS[] = {5,6,7};
@@ -30,8 +55,8 @@ void setup() {
   // put your setup code here, to run once:
 
   AudioMemory(150);
-  sgtl.enable();
-  sgtl.volume(0.2);
+  sgtl5000_1.enable();
+  sgtl5000_1.volume(0.2);
   
   for(int i=0;i<3;i++) {
     pinMode(MUX_SEND_PINS[i], OUTPUT);
@@ -45,18 +70,9 @@ void setup() {
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
   
-  Serial.println("initialising...");
-  module_oscillatorSaw.begin(0.3,220,WAVEFORM_SAWTOOTH);
-  for(int i=0;i<100;i++) {
-    dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, module_finalStage, 0);
-    delay(50);
-    dynamicConnections[0]->disconnect();
-    delete dynamicConnections[0];
-    dynamicConnections[0] = NULL;
-    delay(50);
-  }
-  dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, module_finalStage, 0);
-  Serial.println("audio connection!");
+  square.begin(0.5, 440, WAVEFORM_SQUARE);
+  sawtooth.begin(0.5, 440, WAVEFORM_SAWTOOTH);
+  lfo.begin(0.5, 5, WAVEFORM_SINE);
 }
 
 unsigned long t=0;
@@ -105,9 +121,9 @@ void loop() {
               }
             }
           }
+          updatePatchCables();
           if(!digitalRead(KEYBOARD_PIN)) {
-            float freq = pow(2.0, (j-0.0)/12.0) * 440.0;
-            module_oscillatorSaw.frequency(freq);
+            //float freq = pow(2.0, (j-0.0)/12.0) * 440.0;
           }
         }
       }
@@ -124,8 +140,7 @@ void loop() {
         channel = MIDI.getChannel();
         if (velocity > 0) {
           Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
-          float freq = pow(2.0, (note-49.0)/12.0) * 440.0;
-          //saw.frequency(freq);
+          //float freq = pow(2.0, (note-49.0)/12.0) * 440.0;
         } else {
           Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
         }
@@ -147,5 +162,24 @@ void loop() {
     t += 10000;
     //Serial.println("(inactivity)");
   }
+}
+
+void updatePatchCables() {
+  finalStage.gain(0, patchConnections[0][4] ? 1 : 0);
+  finalStage.gain(1, patchConnections[0][5] ? 1 : 0);
+  finalStage.gain(2, patchConnections[0][6] ? 1 : 0);
+  finalStage.gain(3, patchConnections[0][7] ? 1 : 0);
+  oscFrequency.gain(0, patchConnections[1][4] ? 1 : 0);
+  oscFrequency.gain(1, patchConnections[1][5] ? 1 : 0);
+  oscFrequency.gain(2, patchConnections[1][6] ? 1 : 0);
+  oscFrequency.gain(3, patchConnections[1][7] ? 1 : 0);
+  filterInput.gain(0, patchConnections[2][4] ? 1 : 0);
+  filterInput.gain(1, patchConnections[2][5] ? 1 : 0);
+  filterInput.gain(2, patchConnections[2][6] ? 1 : 0);
+  filterInput.gain(3, patchConnections[2][7] ? 1 : 0);
+  filterFreq.gain(0, patchConnections[3][4] ? 1 : 0);
+  filterFreq.gain(1, patchConnections[3][5] ? 1 : 0);
+  filterFreq.gain(2, patchConnections[3][6] ? 1 : 0);
+  filterFreq.gain(3, patchConnections[3][7] ? 1 : 0);
 }
 
