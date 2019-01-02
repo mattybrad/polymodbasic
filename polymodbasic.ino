@@ -9,13 +9,14 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 AudioControlSGTL5000 sgtl;
 AudioOutputI2S mainOutput;
-AudioAmplifier finalStage;
-AudioConnection con1(finalStage,0,mainOutput,0);
-AudioConnection con2(finalStage,0,mainOutput,1);
-AudioConnection* dynamicConnections[16];
 
+AudioAmplifier module_finalStage;
 AudioSynthWaveformModulated module_oscillatorSquare;
 AudioSynthWaveformModulated module_oscillatorSaw;
+
+AudioConnection* dynamicConnections[16];
+AudioConnection staticConnection1(module_finalStage,0,mainOutput,0);
+AudioConnection staticConnection2(module_finalStage,0,mainOutput,1);
 
 const int MUX_SEND_PINS[] = {2,3,4};
 const int MUX_RECEIVE_PINS[] = {5,6,7};
@@ -28,7 +29,7 @@ boolean patchConnections[16][16];
 void setup() {
   // put your setup code here, to run once:
 
-  AudioMemory(20);
+  AudioMemory(150);
   sgtl.enable();
   sgtl.volume(0.2);
   
@@ -46,8 +47,15 @@ void setup() {
   
   Serial.println("initialising...");
   module_oscillatorSaw.begin(0.3,220,WAVEFORM_SAWTOOTH);
-  delay(500);
-  dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, finalStage, 0);
+  for(int i=0;i<100;i++) {
+    dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, module_finalStage, 0);
+    delay(50);
+    dynamicConnections[0]->disconnect();
+    delete dynamicConnections[0];
+    dynamicConnections[0] = NULL;
+    delay(50);
+  }
+  dynamicConnections[0] = new AudioConnection(module_oscillatorSaw, 0, module_finalStage, 0);
   Serial.println("audio connection!");
 }
 
