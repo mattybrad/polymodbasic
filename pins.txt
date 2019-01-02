@@ -1,0 +1,24 @@
+0	MIDI in
+1	MIDI out
+2	mux A address 0
+3	mux A address 1
+4	mux A address 2
+5	mux B address 0
+6	mux B address 1	
+7	mux B address 2
+8	connection read pin 1
+9	audio
+10	connection send pin 1
+11	audio
+12	connection send pin 2
+13	audio
+14	connection read pin 2
+15	keyboard read
+16
+17
+18	audio
+19	audio
+20
+21
+22	audio
+23	audio
