@@ -1,14 +1,25 @@
 #include "AudioConnections.h"
 
-AudioMixer4 *inputMixers[8][3] = {
-  {&sawtoothMixerA1,&sawtoothMixerB1,&sawtoothMixerC1},
-  {&squareMixerA1,&squareMixerB1,&squareMixerC1},
-  {&filterMixerA1,&filterMixerB1,&filterMixerC1},
-  {&filterFreqMixerA1,&filterFreqMixerB1,&filterFreqMixerC1},
-  {&ampMixerA1,&ampMixerB1,&ampMixerC1},
-  {&ampControlMixerA1,&ampControlMixerB1,&ampControlMixerC1},
-  {&envelopeMixerA1,&envelopeMixerB1,&envelopeMixerC1},
-  {&mainMixerA1,&mainMixerB1,&mainMixerC1}
+AudioMixer4 *inputMixers[2][8][3] = {
+  {
+    {&sawtoothMixerA1,&sawtoothMixerB1,&sawtoothMixerC1},
+    {&squareMixerA1,&squareMixerB1,&squareMixerC1},
+    {&filterMixerA1,&filterMixerB1,&filterMixerC1},
+    {&filterFreqMixerA1,&filterFreqMixerB1,&filterFreqMixerC1},
+    {&ampMixerA1,&ampMixerB1,&ampMixerC1},
+    {&ampControlMixerA1,&ampControlMixerB1,&ampControlMixerC1},
+    {&envelopeMixerA1,&envelopeMixerB1,&envelopeMixerC1},
+    {&mainMixerA1,&mainMixerB1,&mainMixerC1}
+  },{
+    {&sawtoothMixerA2,&sawtoothMixerB2,&sawtoothMixerC2},
+    {&squareMixerA2,&squareMixerB2,&squareMixerC2},
+    {&filterMixerA2,&filterMixerB2,&filterMixerC2},
+    {&filterFreqMixerA2,&filterFreqMixerB2,&filterFreqMixerC2},
+    {&ampMixerA2,&ampMixerB2,&ampMixerC2},
+    {&ampControlMixerA2,&ampControlMixerB2,&ampControlMixerC2},
+    {&envelopeMixerA2,&envelopeMixerB2,&envelopeMixerC2},
+    {&mainMixerA2,&mainMixerB2,&mainMixerC2}
+  }
 };
 
 #include <MIDI.h>
@@ -48,9 +59,14 @@ void setup() {
   sawtooth1.begin(0.2, 110, WAVEFORM_SAWTOOTH);
   lfo1.begin(0.5, 0.1, WAVEFORM_SINE);
   filter1.octaveControl(4);
+
+  square2.begin(0.2, 110, WAVEFORM_SQUARE);
+  sawtooth2.begin(0.2, 110, WAVEFORM_SAWTOOTH);
+  lfo2.begin(0.5, 0.1, WAVEFORM_SINE);
+  filter2.octaveControl(4);
   
   polyMixer.gain(0,1.0);
-  polyMixer.gain(1,0.0);
+  polyMixer.gain(1,1.0);
 }
 
 unsigned long t=0;
@@ -79,6 +95,8 @@ void loop() {
       for(int b=0;b<2;b++) {
   
         for(int j=0;j<8;j++) {
+          checkMidi();
+          
           digitalWrite(MUX_RECEIVE_PINS[0], bitRead(j,0));
           digitalWrite(MUX_RECEIVE_PINS[1], bitRead(j,1));
           digitalWrite(MUX_RECEIVE_PINS[2], bitRead(j,2));
@@ -103,21 +121,23 @@ void loop() {
             if(connectionReading) {
               if(connectionReading && pin1 <= 7 && pin2 >= 8) {
                 // new connection valid (output to input)
-                inputMixers[pin2-8][pin1/4]->gain(pin1%4,1.0);
+                inputMixers[0][pin2-8][pin1/4]->gain(pin1%4,1.0);
+                inputMixers[1][pin2-8][pin1/4]->gain(pin1%4,1.0);
               } else {
                 // new connection not valid (output to output or input to input)
                 anyBadConnections = true;
               }
             } else {
               if(pin1 <= 7 && pin2 >= 8) { 
-                inputMixers[pin2-8][pin1/4]->gain(pin1%4,0.0);
+                inputMixers[0][pin2-8][pin1/4]->gain(pin1%4,0.0);
+                inputMixers[1][pin2-8][pin1/4]->gain(pin1%4,0.0);
               }
             }
           }
           //sawtooth1.frequency(map(analogRead(17),0,1023,50,440));
           //updatePatchCables();
           if(!digitalRead(KEYBOARD_PIN)) {
-            float freq = pow(2.0, (j-12)/12.0) * 440.0;
+            float freq = pow(2.0, (j-24)/12.0) * 440.0;
             sawtooth1.frequency(freq);
             square1.frequency(freq);
           }
@@ -127,6 +147,10 @@ void loop() {
   }
   digitalWrite(ERROR_LED_PIN, anyBadConnections);
 
+  Serial.println(AudioMemoryUsageMax());
+}
+
+void checkMidi() {
   int note, velocity, channel, d1, d2;
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
     byte type = MIDI.getType();
@@ -138,6 +162,9 @@ void loop() {
         if (velocity > 0) {
           Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
           //float freq = pow(2.0, (note-49.0)/12.0) * 440.0;
+          float freq = pow(2.0, (note-49)/12.0) * 440.0;
+            sawtooth1.frequency(freq);
+            square1.frequency(freq);
         } else {
           Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
         }
@@ -159,26 +186,5 @@ void loop() {
     t += 10000;
     //Serial.println("(inactivity)");
   }
-  //Serial.println(AudioMemoryUsageMax());
-}
-
-void updatePatchCables() {
-  
-//  finalStage.gain(0, patchConnections[0][4] ? 1 : 0);
-//  finalStage.gain(1, patchConnections[0][5] ? 1 : 0);
-//  finalStage.gain(2, patchConnections[0][6] ? 1 : 0);
-//  finalStage.gain(3, patchConnections[0][7] ? 1 : 0);
-//  oscFrequency.gain(0, patchConnections[1][4] ? 1 : 0);
-//  oscFrequency.gain(1, patchConnections[1][5] ? 1 : 0);
-//  oscFrequency.gain(2, patchConnections[1][6] ? 1 : 0);
-//  oscFrequency.gain(3, patchConnections[1][7] ? 1 : 0);
-//  filterInput.gain(0, patchConnections[2][4] ? 1 : 0);
-//  filterInput.gain(1, patchConnections[2][5] ? 1 : 0);
-//  filterInput.gain(2, patchConnections[2][6] ? 1 : 0);
-//  filterInput.gain(3, patchConnections[2][7] ? 1 : 0);
-//  filterFreq.gain(0, patchConnections[3][4] ? 1 : 0);
-//  filterFreq.gain(1, patchConnections[3][5] ? 1 : 0);
-//  filterFreq.gain(2, patchConnections[3][6] ? 1 : 0);
-//  filterFreq.gain(3, patchConnections[3][7] ? 1 : 0);
 }
 
