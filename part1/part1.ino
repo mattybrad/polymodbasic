@@ -54,7 +54,7 @@ boolean patchConnections[16][16];
 void setup() {
   // put your setup code here, to run once:
 
-  AudioMemory(150);
+  AudioMemory(50);
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.2);
   
@@ -73,6 +73,7 @@ void setup() {
   square.begin(0.5, 440, WAVEFORM_SQUARE);
   sawtooth.begin(0.5, 440, WAVEFORM_SAWTOOTH);
   lfo.begin(0.5, 5, WAVEFORM_SINE);
+  filter.octaveControl(4);
 }
 
 unsigned long t=0;
@@ -121,6 +122,7 @@ void loop() {
               }
             }
           }
+          sawtooth.frequency(map(analogRead(17),0,1023,50,440));
           updatePatchCables();
           if(!digitalRead(KEYBOARD_PIN)) {
             //float freq = pow(2.0, (j-0.0)/12.0) * 440.0;
