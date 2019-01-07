@@ -157,14 +157,17 @@ void loop() {
 //            sawtooth1.frequency(freq);
 //            square1.frequency(freq);
 //          }
-          //keyboardHandler.setKey(60+j, !digitalRead(KEYBOARD_PIN));
-          //keyboardHandler.update();
+          keyboardHandler.setKey(48+j, !digitalRead(KEYBOARD_PIN));
+          keyboardHandler.update();
           checkEnvelopeGates();
         }
         
-        //float freq1 = pow(2.0, (keyboardHandler.getNote(0)-60.0)/12.0) * 440.0;
-        //sawtooth1.frequency(freq1);
-        //square1.frequency(freq1);
+        float freq1 = pow(2.0, (keyboardHandler.getNote(0)-49)/12.0) * 440.0;
+        sawtooth1.frequency(freq1);
+        square1.frequency(freq1);
+        float freq2 = pow(2.0, (keyboardHandler.getNote(1)-49)/12.0) * 440.0;
+        sawtooth2.frequency(freq2);
+        square2.frequency(freq2);
         
       }
     }
