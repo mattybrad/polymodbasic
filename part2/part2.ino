@@ -34,13 +34,14 @@ const int ANALOG_PIN = 17;
 const int ERROR_LED_PIN = 20;
 
 boolean patchConnections[16][16];
+boolean tempGateOpen = false;
 
 void setup() {
   // put your setup code here, to run once:
 
-  AudioMemory(80);
+  AudioMemory(100);
   sgtl5000_1.enable();
-  sgtl5000_1.volume(0.2);
+  sgtl5000_1.volume(0.3);
   
   for(int i=0;i<3;i++) {
     pinMode(MUX_SEND_PINS[i], OUTPUT);
@@ -57,19 +58,25 @@ void setup() {
   
   square1.begin(0.2, 110, WAVEFORM_SQUARE);
   sawtooth1.begin(0.2, 110, WAVEFORM_SAWTOOTH);
-  lfo1.begin(0.5, 0.1, WAVEFORM_SINE);
+  lfo1.begin(0.5, 8, WAVEFORM_SINE);
   filter1.octaveControl(4);
+  filter1.resonance(2.5);
+
+  envelopeGateInput1.begin();
+  envelope1.attack(10);
+  envelope1.sustain(0.2);
+  envelope1.release(500);
+  dc1.amplitude(1.0);
 
   square2.begin(0.2, 110, WAVEFORM_SQUARE);
   sawtooth2.begin(0.2, 110, WAVEFORM_SAWTOOTH);
-  lfo2.begin(0.5, 0.1, WAVEFORM_SINE);
+  lfo2.begin(0.5, 8, WAVEFORM_SINE);
   filter2.octaveControl(4);
+  filter2.resonance(2.5);
   
   polyMixer.gain(0,1.0);
   polyMixer.gain(1,1.0);
 }
-
-unsigned long t=0;
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -141,50 +148,54 @@ void loop() {
             sawtooth1.frequency(freq);
             square1.frequency(freq);
           }
+          checkEnvelopeGate();
         }
       }
     }
   }
   digitalWrite(ERROR_LED_PIN, anyBadConnections);
 
-  Serial.println(AudioMemoryUsageMax());
+  //Serial.println(AudioMemoryUsageMax());
 }
 
 void checkMidi() {
-  int note, velocity, channel, d1, d2;
-  if (MIDI.read()) {                    // Is there a MIDI message incoming ?
+  int note, velocity;
+  if (MIDI.read()) {
     byte type = MIDI.getType();
     switch (type) {
       case midi::NoteOn:
         note = MIDI.getData1();
         velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
         if (velocity > 0) {
-          Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
-          //float freq = pow(2.0, (note-49.0)/12.0) * 440.0;
           float freq = pow(2.0, (note-49)/12.0) * 440.0;
             sawtooth1.frequency(freq);
             square1.frequency(freq);
         } else {
-          Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
+          
         }
         break;
       case midi::NoteOff:
         note = MIDI.getData1();
-        velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
-        Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;
-      default:
-        d1 = MIDI.getData1();
-        d2 = MIDI.getData2();
-        Serial.println(String("Message, type=") + type + ", data = " + d1 + " " + d2);
     }
-    t = millis();
   }
-  if (millis() - t > 10000) {
-    t += 10000;
-    //Serial.println("(inactivity)");
+}
+
+void checkEnvelopeGate() {
+  if(envelopeGateInput1.available() > 0) {
+    int16_t test[128];
+    memcpy(test, envelopeGateInput1.readBuffer(), 256);
+    envelopeGateInput1.freeBuffer();
+    int16_t x = test[0];
+    boolean newGateReading = (x > 0);
+    if(newGateReading != tempGateOpen) {
+      tempGateOpen = newGateReading;
+      if(tempGateOpen) {
+        envelope1.noteOn();
+      }
+      else envelope1.noteOff();
+    }
+    envelopeGateInput1.clear();
   }
 }
 
