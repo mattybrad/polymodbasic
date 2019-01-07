@@ -1,4 +1,5 @@
 #include "AudioConnections.h"
+#include "KeyboardHandler.h"
 
 AudioMixer4 *inputMixers[2][8][3] = {
   {
@@ -34,7 +35,9 @@ const int ANALOG_PIN = 17;
 const int ERROR_LED_PIN = 20;
 
 boolean patchConnections[16][16];
-boolean tempGateOpen = false;
+boolean tempGateOpen1 = false;
+boolean tempGateOpen2 = false;
+KeyboardHandler keyboardHandler;
 
 void setup() {
   // put your setup code here, to run once:
@@ -58,21 +61,27 @@ void setup() {
   
   square1.begin(0.2, 110, WAVEFORM_SQUARE);
   sawtooth1.begin(0.2, 110, WAVEFORM_SAWTOOTH);
-  lfo1.begin(0.5, 8, WAVEFORM_SINE);
+  lfo1.begin(0.5, 4, WAVEFORM_SINE);
   filter1.octaveControl(4);
   filter1.resonance(2.5);
 
   envelopeGateInput1.begin();
-  envelope1.attack(10);
+  envelope1.attack(20);
   envelope1.sustain(0.2);
-  envelope1.release(500);
+  envelope1.release(50);
   dc1.amplitude(1.0);
 
   square2.begin(0.2, 110, WAVEFORM_SQUARE);
   sawtooth2.begin(0.2, 110, WAVEFORM_SAWTOOTH);
-  lfo2.begin(0.5, 8, WAVEFORM_SINE);
+  lfo2.begin(0.5, 4, WAVEFORM_SINE);
   filter2.octaveControl(4);
   filter2.resonance(2.5);
+
+  envelopeGateInput2.begin();
+  envelope2.attack(20);
+  envelope2.sustain(0.2);
+  envelope2.release(50);
+  dc2.amplitude(1.0);
   
   polyMixer.gain(0,1.0);
   polyMixer.gain(1,1.0);
@@ -143,13 +152,20 @@ void loop() {
           }
           //sawtooth1.frequency(map(analogRead(17),0,1023,50,440));
           //updatePatchCables();
-          if(!digitalRead(KEYBOARD_PIN)) {
-            float freq = pow(2.0, (j-24)/12.0) * 440.0;
-            sawtooth1.frequency(freq);
-            square1.frequency(freq);
-          }
-          checkEnvelopeGate();
+//          if(!digitalRead(KEYBOARD_PIN)) {
+//            float freq = pow(2.0, (j-24)/12.0) * 440.0;
+//            sawtooth1.frequency(freq);
+//            square1.frequency(freq);
+//          }
+          //keyboardHandler.setKey(60+j, !digitalRead(KEYBOARD_PIN));
+          //keyboardHandler.update();
+          checkEnvelopeGates();
         }
+        
+        //float freq1 = pow(2.0, (keyboardHandler.getNote(0)-60.0)/12.0) * 440.0;
+        //sawtooth1.frequency(freq1);
+        //square1.frequency(freq1);
+        
       }
     }
   }
@@ -167,35 +183,62 @@ void checkMidi() {
         note = MIDI.getData1();
         velocity = MIDI.getData2();
         if (velocity > 0) {
-          float freq = pow(2.0, (note-49)/12.0) * 440.0;
-            sawtooth1.frequency(freq);
-            square1.frequency(freq);
+          keyboardHandler.setKey(note, true);
+          keyboardHandler.update();
+          float freq1 = pow(2.0, (keyboardHandler.getNote(0)-49)/12.0) * 440.0;
+          sawtooth1.frequency(freq1);
+          square1.frequency(freq1);
+          float freq2 = pow(2.0, (keyboardHandler.getNote(1)-49)/12.0) * 440.0;
+          sawtooth2.frequency(freq2);
+          square2.frequency(freq2);          
         } else {
-          
+          keyboardHandler.setKey(note, false);
+          keyboardHandler.update();
         }
         break;
       case midi::NoteOff:
         note = MIDI.getData1();
+        keyboardHandler.setKey(note, false);
+        keyboardHandler.update();
         break;
     }
   }
 }
 
-void checkEnvelopeGate() {
+void checkEnvelopeGates() {
   if(envelopeGateInput1.available() > 0) {
     int16_t test[128];
     memcpy(test, envelopeGateInput1.readBuffer(), 256);
     envelopeGateInput1.freeBuffer();
     int16_t x = test[0];
     boolean newGateReading = (x > 0);
-    if(newGateReading != tempGateOpen) {
-      tempGateOpen = newGateReading;
-      if(tempGateOpen) {
+    if(newGateReading != tempGateOpen1) {
+      tempGateOpen1 = newGateReading;
+      if(tempGateOpen1) {
         envelope1.noteOn();
       }
       else envelope1.noteOff();
     }
     envelopeGateInput1.clear();
   }
+  if(envelopeGateInput2.available() > 0) {
+    int16_t test[128];
+    memcpy(test, envelopeGateInput2.readBuffer(), 256);
+    envelopeGateInput2.freeBuffer();
+    int16_t x = test[0];
+    boolean newGateReading = (x > 0);
+    if(newGateReading != tempGateOpen2) {
+      tempGateOpen2 = newGateReading;
+      if(tempGateOpen2) {
+        envelope2.noteOn();
+      }
+      else envelope2.noteOff();
+    }
+    envelopeGateInput2.clear();
+  }
+}
+
+void handleNoteOn(int note) {
+  
 }
 
