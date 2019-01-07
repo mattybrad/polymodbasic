@@ -31,13 +31,15 @@ const int MUX_RECEIVE_PINS[] = {5,6,7};
 const int CONNECTION_DATA_PINS[] = {8, 14};
 const int CONNECTION_SEND_PINS[] = {10, 12};
 const int KEYBOARD_PIN = 16;
-const int ANALOG_PIN = 17;
+const int ANALOG_PIN_1 = 17;
+const int ANALOG_PIN_2 = 21;
 const int ERROR_LED_PIN = 20;
 
 boolean patchConnections[16][16];
 boolean tempGateOpen1 = false;
 boolean tempGateOpen2 = false;
 KeyboardHandler keyboardHandler;
+const int buttonNotes[] = {48, 50, 52, 53, 55, 57, 59, 60};
 
 void setup() {
   // put your setup code here, to run once:
@@ -150,16 +152,11 @@ void loop() {
               }
             }
           }
-          //sawtooth1.frequency(map(analogRead(17),0,1023,50,440));
-          //updatePatchCables();
-//          if(!digitalRead(KEYBOARD_PIN)) {
-//            float freq = pow(2.0, (j-24)/12.0) * 440.0;
-//            sawtooth1.frequency(freq);
-//            square1.frequency(freq);
-//          }
-          keyboardHandler.setKey(48+j, !digitalRead(KEYBOARD_PIN));
+          keyboardHandler.setKey(buttonNotes[j], !digitalRead(KEYBOARD_PIN));
           keyboardHandler.update();
           checkEnvelopeGates();
+          filter1.frequency(4*analogRead(ANALOG_PIN_1));
+          filter2.frequency(4*analogRead(ANALOG_PIN_1));
         }
         
         float freq1 = pow(2.0, (keyboardHandler.getNote(0)-49)/12.0) * 440.0;
