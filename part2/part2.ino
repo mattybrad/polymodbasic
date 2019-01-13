@@ -157,6 +157,8 @@ void loop() {
           checkEnvelopeGates();
           filter1.frequency(4*analogRead(ANALOG_PIN_1));
           filter2.frequency(4*analogRead(ANALOG_PIN_1));
+          lfo1.frequency(analogRead(ANALOG_PIN_2)/16);
+          lfo2.frequency(analogRead(ANALOG_PIN_2)/16);
         }
         
         float freq1 = pow(2.0, (keyboardHandler.getNote(0)-49)/12.0) * 440.0;

@@ -12,13 +12,13 @@
 11	audio
 12	connection send pin 2
 13	audio
-14	connection read pin 2
+14	error LED (temp?)
 15	audio?
 16	keyboard read
-17	analog 1
+17	connection read pin 2
 18	audio
 19	audio
-20	error LED (temp?)
+20	analog 1
 21	analog 2
 22	audio
 23	audio
